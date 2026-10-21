@@ -103,6 +103,8 @@ Set-Content -Path $setupAgentsScript -Value @"
 `$runInsideDocker = '$runInsideDocker'
 
 Start-Transcript -Path "c:\log.txt" -Append
+# Run the setup only once: remove the startup task before doing anything else
+Unregister-ScheduledTask -TaskName "SetupStart" -Confirm:`$false
 $installDockerScriptContent
 
 $finalSetupScriptContent
