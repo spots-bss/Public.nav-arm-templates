@@ -6,9 +6,17 @@
             "type": "string",
 			"defaultValue": "",
             "minLength": 3,
-            "maxLength": 15,            
+            "maxLength": 63,
             "metadata": {
-                "Description": "Select the name of the deployment"
+                "Description": "Select the name of the deployment. The name is used as prefix for all resources"
+            }
+        },
+        "ComputerName": {
+            "type": "string",
+            "defaultValue": "",
+            "maxLength": 15,
+            "metadata": {
+                "Description": "Optional: Specify the Windows computer name (max. 15 characters). If empty, the first 15 characters of the VM name are used"
             }
         },
         "RemoteDesktopAccess": {
@@ -228,16 +236,17 @@
         "imageOffer": "[if(equals(variables('OperatingSystem'),'Windows 11'),'Windows-11','WindowsServer')]",
         "imageSku": "[if(equals(variables('OperatingSystem'),'Windows 11'),'win11-21h2-pro',if(equals(variables('OperatingSystem'),'Windows Server 2025'),'2025-datacenter',if(equals(variables('OperatingSystem'),'Windows Server 2022'),'2022-Datacenter',if(equals(variables('OperatingSystem'),'Windows Server 2019'),'2019-Datacenter','2019-Datacenter-with-containers'))))]",
         "osDiskType": "[parameters('OSDiskType')]",
-        "OSDiskName": "[concat(variables('vmName'),'_osdisk')]",
-        "publicIPAddressName": "[concat(variables('vmName'), '_pip')]",
-        "networkSecurityGroupName": "networksecuritygroup",
+        "OSDiskName": "[concat(variables('vmName'),'-OSDisk_1')]",
+        "publicIPAddressName": "[concat(variables('vmName'),'-ip')]",
+        "networkSecurityGroupName": "[concat(variables('vmName'),'-nsg')]",
         "dnsName": "[tolower(variables('vmName'))]",
         "addressPrefix": "10.0.0.0/16",
         "subnetName": "Subnet",
         "subnetPrefix": "10.0.0.0/24",
-        "virtualNetworkName": "virtualnetwork",
-        "server1Name": "[tolower(variables('vmName'))]",
-        "nic1Name": "[concat(variables('vmName'),'_nic')]",
+        "virtualNetworkName": "[concat(variables('vmName'),'-vnet')]",
+        "server1Name": "[variables('vmName')]",
+        "computerName": "[if(empty(trim(parameters('ComputerName'))),take(variables('vmName'),15),trim(parameters('ComputerName')))]",
+        "nic1Name": "[concat(variables('vmName'),'-nic')]",
         "delimiters": [ ",", ";" ],
         "RdpAddresses": "[if(equals(variables('RemoteDesktopAccess'),'-'),'',variables('RemoteDesktopAccess'))]",
         "rdpSourceAddressPrefix": "[split(variables('RdpAddresses'),variables('delimiters'))]",
@@ -405,7 +414,7 @@
                     "vmSize": "[variables('vmSize')]"
                 },
                 "osProfile": {
-                    "computerName": "[variables('server1Name')]",
+                    "computerName": "[variables('computerName')]",
                     "adminUsername": "[variables('vmAdminUsername')]",
                     "adminPassword": "[variables('adminPassword')]",
                     "windowsConfiguration": {
