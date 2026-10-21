@@ -53,12 +53,23 @@ $SetupAgentsScriptUrl = $templateLink.Substring(0,$templateLink.LastIndexOf('/')
 $SetupAgentsScript = "c:\Download\SetupAgents.ps1"
 Download-File -sourceUrl $SetupAgentsScriptUrl -destinationFile $SetupAgentsScript
 
+$installDockerScriptContent = ''
 $installDocker = (!(Test-Path -Path "C:\Program Files\Docker\docker.exe" -PathType Leaf))
 if ($installDocker) {
+    if ((Get-WindowsOptionalFeature -FeatureName containers -Online).State -ne 'Enabled') {
+        # Docker Engine requires Windows feature containers to be enabled
+        # Windows needs a restart between containers feature and Docker Engine installation
+        # The Docker installation is moved to the *SetupAgents.ps1* script which runs after a restart
+        Enable-WindowsOptionalFeature -FeatureName containers -Online -NoRestart | Out-Null
+    }
     $installDockerScriptUrl = $templateLink.Substring(0,$templateLink.LastIndexOf('/')+1)+'InstallOrUpdateDockerEngine.ps1'
     $installDockerScript = Join-Path $DownloadFolder "InstallOrUpdateDockerEngine.ps1"
     Download-File -sourceUrl $installDockerScriptUrl -destinationFile $installDockerScript
-    . $installDockerScript -Force -envScope "Machine" -dataRoot 'c:\d'
+    $installDockerScriptContent = @"
+if (!(Test-Path -Path "C:\Program Files\Docker\docker.exe" -PathType Leaf)) {
+    . '$installDockerScript' -Force -envScope "Machine" -dataRoot 'c:\d'
+}
+"@
 }
 
 $finalSetupScriptContent = ''
@@ -92,6 +103,8 @@ Set-Content -Path $setupAgentsScript -Value @"
 `$runInsideDocker = '$runInsideDocker'
 
 Start-Transcript -Path "c:\log.txt" -Append
+$installDockerScriptContent
+
 $finalSetupScriptContent
 
 $setupAgentsScriptContent
