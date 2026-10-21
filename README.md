@@ -24,8 +24,8 @@ Where
 **Note:** After opening the deployment URL, the Azure portal will prompt you for the values of the fields in the ARM template.
 
 ## Examples
-- getbc -> https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fnav-arm-templates%2Fmaster%2Fgetbc.json
-- buildagent -> https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fnav-arm-templates%2Fmaster%2Fbuildagent.json
+- getbc -> https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fspots-bss%2Fpublic.nav-arm-templates%2Fmain%2Fgetbc.json
+- buildagent -> https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fspots-bss%2Fpublic.nav-arm-templates%2Fmain%2Fbuildagent.json
 
 # Contributing
 

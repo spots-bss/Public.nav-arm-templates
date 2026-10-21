@@ -23,6 +23,7 @@
             "type": "string",
             "defaultValue": "Windows Server 2022",
             "allowedValues": [
+                "Windows Server 2025",
                 "Windows Server 2022",
                 "Windows Server 2019"
             ],
@@ -113,7 +114,7 @@
                 "Description": "Select the VM size of the deployment"
             }
         },
-        "StorageAccountType": {
+        "OSDiskType": {
             "type": "string",
             "defaultValue": "Premium_LRS",
             "allowedValues": [
@@ -121,7 +122,7 @@
                 "Premium_LRS"
             ],
             "metadata": {
-                "Description": "Select the preferred storage account type. Standard_LRS is HDD, Premium_LRS is SSD. (Not all VM Sizes support SSD)"
+                "Description": "Select the preferred OS disk type. Standard_LRS is HDD, Premium_LRS is SSD. (Not all VM Sizes support SSD)"
             }
         },
         "osDiskSize": {
@@ -215,11 +216,10 @@
         "OperatingSystem": "[parameters('OperatingSystem')]",
         "imagePublisher": "[if(equals(variables('OperatingSystem'),'Windows 11'),'MicrosoftWindowsDesktop','MicrosoftWindowsServer')]",
         "imageOffer": "[if(equals(variables('OperatingSystem'),'Windows 11'),'Windows-11','WindowsServer')]",
-        "imageSku": "[if(equals(variables('OperatingSystem'),'Windows 11'),'win11-21h2-pro',if(equals(variables('OperatingSystem'),'Windows Server 2022'),'2022-Datacenter',if(equals(variables('OperatingSystem'),'Windows Server 2019'),'2019-Datacenter','2019-Datacenter-with-containers')))]",
-        "storageAccountType": "[parameters('StorageAccountType')]",
+        "imageSku": "[if(equals(variables('OperatingSystem'),'Windows 11'),'win11-21h2-pro',if(equals(variables('OperatingSystem'),'Windows Server 2025'),'2025-datacenter',if(equals(variables('OperatingSystem'),'Windows Server 2022'),'2022-Datacenter',if(equals(variables('OperatingSystem'),'Windows Server 2019'),'2019-Datacenter','2019-Datacenter-with-containers'))))]",
+        "osDiskType": "[parameters('OSDiskType')]",
         "OSDiskName": "[concat(variables('vmName'),'_osdisk')]",
         "publicIPAddressName": "[concat(variables('vmName'), '_pip')]",
-        "storageAccountName": "[concat('storage', uniqueString(resourceGroup().id))]",
         "networkSecurityGroupName": "networksecuritygroup",
         "dnsName": "[tolower(variables('vmName'))]",
         "addressPrefix": "10.0.0.0/16",
@@ -238,28 +238,22 @@
     },
     "resources": [
         {
-            "apiVersion": "2015-05-01-preview",
-            "type": "Microsoft.Storage/storageAccounts",
-            "name": "[variables('storageAccountName')]",
-            "location": "[resourceGroup().location]",
-            "properties": {
-                "accountType": "[variables('storageAccountType')]"
-            }
-        },
-        {
-            "apiVersion": "2015-05-01-preview",
+            "apiVersion": "2023-09-01",
             "type": "Microsoft.Network/publicIPAddresses",
             "name": "[variables('publicIPAddressName')]",
             "location": "[resourceGroup().location]",
+            "sku": {
+                "name": "Standard"
+            },
             "properties": {
-                "publicIPAllocationMethod": "Dynamic",
+                "publicIPAllocationMethod": "Static",
                 "dnsSettings": {
                     "domainNameLabel": "[variables('dnsName')]"
                 }
             }
         },
         {
-            "apiVersion": "2015-05-01-preview",
+            "apiVersion": "2023-09-01",
             "type": "Microsoft.Network/networkSecurityGroups",
             "name": "[variables('networkSecurityGroupName')]",
             "location": "[resourceGroup().location]",
@@ -269,7 +263,7 @@
             }
         },
 		{
-			"apiVersion": "2015-01-01",
+			"apiVersion": "2022-09-01",
 			"type": "Microsoft.Resources/deployments",
 			"name": "rdp-0",
 			"condition": "[not(equals(variables('RemoteDesktopAccess'),'-'))]",
@@ -290,7 +284,7 @@
 			}
 		},       
 		{
-			"apiVersion": "2015-01-01",
+			"apiVersion": "2022-09-01",
 			"type": "Microsoft.Resources/deployments",
 			"name": "[concat('rdp-', copyIndex(1))]",
 			"condition": "[not(equals(variables('RemoteDesktopAccess'),'-'))]",
@@ -310,7 +304,7 @@
 					"variables": {},
 					"resources": [
 						{
-							"apiVersion": "2016-09-01",
+							"apiVersion": "2023-09-01",
 							"name": "[concat(variables('networkSecurityGroupName'),'/Rdp',copyIndex())]",
 							"type": "Microsoft.Network/networkSecurityGroups/securityRules",
 							"location":"[resourceGroup().location]",
@@ -332,7 +326,7 @@
 			}
 		},
         {
-            "apiVersion": "2015-05-01-preview",
+            "apiVersion": "2023-09-01",
             "type": "Microsoft.Network/virtualNetworks",
             "name": "[variables('virtualNetworkName')]",
             "location": "[resourceGroup().location]",
@@ -359,7 +353,7 @@
             }
         },
         {
-            "apiVersion": "2018-11-01",
+            "apiVersion": "2023-09-01",
             "type": "Microsoft.Network/networkInterfaces",
             "name": "[variables('nic1Name')]",
             "location": "[resourceGroup().location]",
@@ -389,12 +383,11 @@
             }
         },
         {
-            "apiVersion": "2018-10-01",
+            "apiVersion": "2024-03-01",
             "type": "Microsoft.Compute/virtualMachines",
             "name": "[variables('server1Name')]",
             "location": "[resourceGroup().location]",
             "dependsOn": [
-                "[concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]",
                 "[concat('Microsoft.Network/networkInterfaces/', variables('nic1Name'))]"
             ],
             "properties": {
@@ -422,7 +415,7 @@
                         "name": "[variables('OSDiskName')]",
                         "caching": "ReadWrite",
                         "managedDisk": {
-                          "storageAccountType": "[variables('storageAccountType')]"
+                          "storageAccountType": "[variables('osDiskType')]"
                         },
                         "diskSizeGB": "[parameters('OSDiskSize')]"
                     }
@@ -439,7 +432,7 @@
             ]
         },
         {
-            "apiVersion": "2015-06-15",
+            "apiVersion": "2024-03-01",
             "type": "Microsoft.Compute/virtualMachines/extensions",
             "name": "[concat(variables('server1Name'),'/vmextension1')]",
             "location": "[resourceGroup().location]",
