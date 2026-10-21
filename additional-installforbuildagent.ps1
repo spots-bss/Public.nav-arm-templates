@@ -39,6 +39,9 @@ choco install dotnet -y
 AddToStatus "Microsoft dotnet SDK"
 choco install dotnet-sdk -y
 
+# Reload PATH, choco updated it in the registry but not in this session
+$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')
+
 AddToStatus "Checking dotnet nuget list sources"
 $sources = dotnet nuget list source
 if (!($sources | where-Object { $_.Trim() -eq 'https://api.nuget.org/v3/index.json' })) {
