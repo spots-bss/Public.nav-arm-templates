@@ -223,6 +223,27 @@
             "metadata": {
                 "Description": "Optional: Specify a Url to a PowerShell script that should be executed on the VM to do the final setup of the VM."
             }
+        },
+        "ExistingVirtualNetworkName": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "Description": "Optional: Specify the name of an existing virtual network (in the same region as the VM). If empty, a new virtual network is created"
+            }
+        },
+        "ExistingSubnetName": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "Description": "Optional: Specify the name of an existing subnet in the existing virtual network. Required if an existing virtual network is specified"
+            }
+        },
+        "ExistingVirtualNetworkResourceGroup": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "Description": "Optional: Specify the resource group of the existing virtual network. If empty, the resource group of the deployment is used"
+            }
         }
     },
     "variables": {
@@ -251,8 +272,10 @@
         "RdpAddresses": "[if(equals(variables('RemoteDesktopAccess'),'-'),'',variables('RemoteDesktopAccess'))]",
         "rdpSourceAddressPrefix": "[split(variables('RdpAddresses'),variables('delimiters'))]",
         "noOfAddresses": "[length(variables('rdpSourceAddressPrefix'))]",
+        "useExistingVirtualNetwork": "[not(empty(trim(parameters('ExistingVirtualNetworkName'))))]",
+        "existingVirtualNetworkResourceGroup": "[if(empty(trim(parameters('ExistingVirtualNetworkResourceGroup'))),resourceGroup().name,trim(parameters('ExistingVirtualNetworkResourceGroup')))]",
         "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName'))]",
-        "subnetRef": "[concat(variables('vnetID'),'/subnets/',variables('subnetName'))]",
+        "subnetRef": "[if(variables('useExistingVirtualNetwork'),resourceId(variables('existingVirtualNetworkResourceGroup'),'Microsoft.Network/virtualNetworks/subnets',trim(parameters('ExistingVirtualNetworkName')),trim(parameters('ExistingSubnetName'))),concat(variables('vnetID'),'/subnets/',variables('subnetName')))]",
         "ScriptCommandToExecute": "powershell.exe -executionpolicy unrestricted -file "
     },
     "resources": [
@@ -348,6 +371,7 @@
             "apiVersion": "2023-09-01",
             "type": "Microsoft.Network/virtualNetworks",
             "name": "[variables('virtualNetworkName')]",
+            "condition": "[not(variables('useExistingVirtualNetwork'))]",
             "location": "[resourceGroup().location]",
             "dependsOn": [
 				"[concat('Microsoft.Network/networkSecurityGroups/',variables('networkSecurityGroupName'))]"
