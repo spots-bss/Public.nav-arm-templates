@@ -53,12 +53,27 @@ $SetupAgentsScriptUrl = $templateLink.Substring(0,$templateLink.LastIndexOf('/')
 $SetupAgentsScript = "c:\Download\SetupAgents.ps1"
 Download-File -sourceUrl $SetupAgentsScriptUrl -destinationFile $SetupAgentsScript
 
+$cleanupScriptUrl = $templateLink.Substring(0,$templateLink.LastIndexOf('/')+1)+'CleanupAfterDocker.ps1'
+$cleanupScript = Join-Path $DownloadFolder "CleanupAfterDocker.ps1"
+Download-File -sourceUrl $cleanupScriptUrl -destinationFile $cleanupScript
+
+$installDockerScriptContent = ''
 $installDocker = (!(Test-Path -Path "C:\Program Files\Docker\docker.exe" -PathType Leaf))
 if ($installDocker) {
+    if ((Get-WindowsOptionalFeature -FeatureName containers -Online).State -ne 'Enabled') {
+        # Docker Engine requires Windows feature containers to be enabled
+        # Windows needs a restart between containers feature and Docker Engine installation
+        # The Docker installation is moved to the *SetupAgents.ps1* script which runs after a restart
+        Enable-WindowsOptionalFeature -FeatureName containers -Online -NoRestart | Out-Null
+    }
     $installDockerScriptUrl = $templateLink.Substring(0,$templateLink.LastIndexOf('/')+1)+'InstallOrUpdateDockerEngine.ps1'
     $installDockerScript = Join-Path $DownloadFolder "InstallOrUpdateDockerEngine.ps1"
     Download-File -sourceUrl $installDockerScriptUrl -destinationFile $installDockerScript
-    . $installDockerScript -Force -envScope "Machine" -dataRoot 'c:\d'
+    $installDockerScriptContent = @"
+if (!(Test-Path -Path "C:\Program Files\Docker\docker.exe" -PathType Leaf)) {
+    . '$installDockerScript' -Force -envScope "Machine" -dataRoot 'c:\d'
+}
+"@
 }
 
 $finalSetupScriptContent = ''
@@ -76,8 +91,28 @@ $size = (Get-PartitionSupportedSize -DiskNumber 0 -PartitionNumber 2)
 Resize-Partition -DiskNumber 0 -PartitionNumber 2 -Size $size.SizeMax
 
 $setupAgentsScriptContent = ''
+$cleanupTaskScriptContent = ''
 if ($token) {
     $setupAgentsScriptContent = Get-Content -Path $setupAgentsScript -Encoding UTF8 -Raw
+
+    if ($runInsideDocker -ne "Yes") {
+        # The agents are started by the cleanup task after each restart, not by the service manager
+        $cleanupTaskScriptContent = @'
+Get-Service -Name "actions.runner.*", "vstsagent.*" -ErrorAction Ignore | Set-Service -StartupType Manual
+
+$cleanupAction = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy UnRestricted -File C:\Download\CleanupAfterDocker.ps1 -unattended -startAgents"
+$cleanupTrigger = New-ScheduledTaskTrigger -AtStartup
+$cleanupTrigger.Delay = "PT1M"
+$cleanupSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -DontStopOnIdleEnd
+Register-ScheduledTask -TaskName "CleanupAfterDocker" `
+                       -Action $cleanupAction `
+                       -Trigger $cleanupTrigger `
+                       -Settings $cleanupSettings `
+                       -RunLevel "Highest" `
+                       -User "NT AUTHORITY\SYSTEM" `
+                       -Force | Out-Null
+'@
+    }
 }
 
 Set-Content -Path $setupAgentsScript -Value @"
@@ -92,9 +127,13 @@ Set-Content -Path $setupAgentsScript -Value @"
 `$runInsideDocker = '$runInsideDocker'
 
 Start-Transcript -Path "c:\log.txt" -Append
+$installDockerScriptContent
+
 $finalSetupScriptContent
 
 $setupAgentsScriptContent
+
+$cleanupTaskScriptContent
 
 Stop-Transcript
 "@

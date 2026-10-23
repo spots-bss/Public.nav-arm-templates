@@ -6,9 +6,17 @@
             "type": "string",
 			"defaultValue": "",
             "minLength": 3,
-            "maxLength": 15,            
+            "maxLength": 63,
             "metadata": {
-                "Description": "Select the name of the deployment"
+                "Description": "Select the name of the deployment. The name is used as prefix for all resources"
+            }
+        },
+        "ComputerName": {
+            "type": "string",
+            "defaultValue": "",
+            "maxLength": 15,
+            "metadata": {
+                "Description": "Optional: Specify the Windows computer name (max. 15 characters). If empty, the first 15 characters of the VM name are used"
             }
         },
         "RemoteDesktopAccess": {
@@ -23,6 +31,7 @@
             "type": "string",
             "defaultValue": "Windows Server 2022",
             "allowedValues": [
+                "Windows Server 2025",
                 "Windows Server 2022",
                 "Windows Server 2019"
             ],
@@ -32,26 +41,8 @@
         },
         "vmSize": {
             "type": "string",
-            "defaultValue": "Standard_D4s_v3",
+            "defaultValue": "Standard_D4s_v5",
             "allowedValues": [
-                "Standard_D2_v2",
-                "Standard_D3_v2",
-                "Standard_D4_v2",
-                "Standard_D5_v2",
-                "Standard_D2_v3",
-                "Standard_D4_v3",
-                "Standard_D8_v3",
-                "Standard_D16_v3",
-                "Standard_D32_v3",
-                "Standard_D48_v3",
-                "Standard_D64_v3",
-                "Standard_D2s_v3",
-                "Standard_D4s_v3",
-                "Standard_D8s_v3",
-                "Standard_D16s_v3",
-                "Standard_D32s_v3",
-                "Standard_D48s_v3",
-                "Standard_D64s_v3",
                 "Standard_D2_v4",
                 "Standard_D4_v4",
                 "Standard_D8_v4",
@@ -94,26 +85,54 @@
                 "Standard_D32s_v5",
                 "Standard_D48s_v5",
                 "Standard_D64s_v5",
-                "Standard_D2a_v5",
-                "Standard_D4a_v5",
-                "Standard_D8a_v5",
-                "Standard_D16a_v5",
-                "Standard_D32a_v5",
-                "Standard_D48a_v5",
-                "Standard_D64a_v5",
+                "Standard_D2d_v5",
+                "Standard_D4d_v5",
+                "Standard_D8d_v5",
+                "Standard_D16d_v5",
+                "Standard_D32d_v5",
+                "Standard_D48d_v5",
+                "Standard_D64d_v5",
+                "Standard_D2ds_v5",
+                "Standard_D4ds_v5",
+                "Standard_D8ds_v5",
+                "Standard_D16ds_v5",
+                "Standard_D32ds_v5",
+                "Standard_D48ds_v5",
+                "Standard_D64ds_v5",
                 "Standard_D2as_v5",
                 "Standard_D4as_v5",
                 "Standard_D8as_v5",
                 "Standard_D16as_v5",
                 "Standard_D32as_v5",
                 "Standard_D48as_v5",
-                "Standard_D64as_v5"
+                "Standard_D64as_v5",
+                "Standard_D2ads_v5",
+                "Standard_D4ads_v5",
+                "Standard_D8ads_v5",
+                "Standard_D16ads_v5",
+                "Standard_D32ads_v5",
+                "Standard_D48ads_v5",
+                "Standard_D64ads_v5",
+                "Standard_D2ls_v5",
+                "Standard_D4ls_v5",
+                "Standard_D8ls_v5",
+                "Standard_D16ls_v5",
+                "Standard_D32ls_v5",
+                "Standard_D48ls_v5",
+                "Standard_D64ls_v5",
+                "Standard_D2lds_v5",
+                "Standard_D4lds_v5",
+                "Standard_D8lds_v5",
+                "Standard_D16lds_v5",
+                "Standard_D32lds_v5",
+                "Standard_D48lds_v5",
+                "Standard_D64lds_v5"
             ],
             "metadata": {
                 "Description": "Select the VM size of the deployment"
             }
         },
-        "StorageAccountType": {
+        "OSDiskType": {
             "type": "string",
             "defaultValue": "Premium_LRS",
             "allowedValues": [
@@ -121,7 +140,7 @@
                 "Premium_LRS"
             ],
             "metadata": {
-                "Description": "Select the preferred storage account type. Standard_LRS is HDD, Premium_LRS is SSD. (Not all VM Sizes support SSD)"
+                "Description": "Select the preferred OS disk type. Standard_LRS is HDD, Premium_LRS is SSD. (Not all VM Sizes support SSD)"
             }
         },
         "osDiskSize": {
@@ -215,19 +234,19 @@
         "OperatingSystem": "[parameters('OperatingSystem')]",
         "imagePublisher": "[if(equals(variables('OperatingSystem'),'Windows 11'),'MicrosoftWindowsDesktop','MicrosoftWindowsServer')]",
         "imageOffer": "[if(equals(variables('OperatingSystem'),'Windows 11'),'Windows-11','WindowsServer')]",
-        "imageSku": "[if(equals(variables('OperatingSystem'),'Windows 11'),'win11-21h2-pro',if(equals(variables('OperatingSystem'),'Windows Server 2022'),'2022-Datacenter',if(equals(variables('OperatingSystem'),'Windows Server 2019'),'2019-Datacenter','2019-Datacenter-with-containers')))]",
-        "storageAccountType": "[parameters('StorageAccountType')]",
-        "OSDiskName": "[concat(variables('vmName'),'_osdisk')]",
-        "publicIPAddressName": "[concat(variables('vmName'), '_pip')]",
-        "storageAccountName": "[concat('storage', uniqueString(resourceGroup().id))]",
-        "networkSecurityGroupName": "networksecuritygroup",
+        "imageSku": "[if(equals(variables('OperatingSystem'),'Windows 11'),'win11-21h2-pro',if(equals(variables('OperatingSystem'),'Windows Server 2025'),'2025-datacenter',if(equals(variables('OperatingSystem'),'Windows Server 2022'),'2022-Datacenter',if(equals(variables('OperatingSystem'),'Windows Server 2019'),'2019-Datacenter','2019-Datacenter-with-containers'))))]",
+        "osDiskType": "[parameters('OSDiskType')]",
+        "OSDiskName": "[concat(variables('vmName'),'-OSDisk_1')]",
+        "publicIPAddressName": "[concat(variables('vmName'),'-ip')]",
+        "networkSecurityGroupName": "[concat(variables('vmName'),'-nsg')]",
         "dnsName": "[tolower(variables('vmName'))]",
         "addressPrefix": "10.0.0.0/16",
         "subnetName": "Subnet",
         "subnetPrefix": "10.0.0.0/24",
-        "virtualNetworkName": "virtualnetwork",
-        "server1Name": "[tolower(variables('vmName'))]",
-        "nic1Name": "[concat(variables('vmName'),'_nic')]",
+        "virtualNetworkName": "[concat(variables('vmName'),'-vnet')]",
+        "server1Name": "[variables('vmName')]",
+        "computerName": "[if(empty(trim(parameters('ComputerName'))),take(variables('vmName'),15),trim(parameters('ComputerName')))]",
+        "nic1Name": "[concat(variables('vmName'),'-nic')]",
         "delimiters": [ ",", ";" ],
         "RdpAddresses": "[if(equals(variables('RemoteDesktopAccess'),'-'),'',variables('RemoteDesktopAccess'))]",
         "rdpSourceAddressPrefix": "[split(variables('RdpAddresses'),variables('delimiters'))]",
@@ -238,28 +257,22 @@
     },
     "resources": [
         {
-            "apiVersion": "2015-05-01-preview",
-            "type": "Microsoft.Storage/storageAccounts",
-            "name": "[variables('storageAccountName')]",
-            "location": "[resourceGroup().location]",
-            "properties": {
-                "accountType": "[variables('storageAccountType')]"
-            }
-        },
-        {
-            "apiVersion": "2015-05-01-preview",
+            "apiVersion": "2023-09-01",
             "type": "Microsoft.Network/publicIPAddresses",
             "name": "[variables('publicIPAddressName')]",
             "location": "[resourceGroup().location]",
+            "sku": {
+                "name": "Standard"
+            },
             "properties": {
-                "publicIPAllocationMethod": "Dynamic",
+                "publicIPAllocationMethod": "Static",
                 "dnsSettings": {
                     "domainNameLabel": "[variables('dnsName')]"
                 }
             }
         },
         {
-            "apiVersion": "2015-05-01-preview",
+            "apiVersion": "2023-09-01",
             "type": "Microsoft.Network/networkSecurityGroups",
             "name": "[variables('networkSecurityGroupName')]",
             "location": "[resourceGroup().location]",
@@ -269,7 +282,7 @@
             }
         },
 		{
-			"apiVersion": "2015-01-01",
+			"apiVersion": "2022-09-01",
 			"type": "Microsoft.Resources/deployments",
 			"name": "rdp-0",
 			"condition": "[not(equals(variables('RemoteDesktopAccess'),'-'))]",
@@ -290,7 +303,7 @@
 			}
 		},       
 		{
-			"apiVersion": "2015-01-01",
+			"apiVersion": "2022-09-01",
 			"type": "Microsoft.Resources/deployments",
 			"name": "[concat('rdp-', copyIndex(1))]",
 			"condition": "[not(equals(variables('RemoteDesktopAccess'),'-'))]",
@@ -310,7 +323,7 @@
 					"variables": {},
 					"resources": [
 						{
-							"apiVersion": "2016-09-01",
+							"apiVersion": "2023-09-01",
 							"name": "[concat(variables('networkSecurityGroupName'),'/Rdp',copyIndex())]",
 							"type": "Microsoft.Network/networkSecurityGroups/securityRules",
 							"location":"[resourceGroup().location]",
@@ -332,7 +345,7 @@
 			}
 		},
         {
-            "apiVersion": "2015-05-01-preview",
+            "apiVersion": "2023-09-01",
             "type": "Microsoft.Network/virtualNetworks",
             "name": "[variables('virtualNetworkName')]",
             "location": "[resourceGroup().location]",
@@ -359,7 +372,7 @@
             }
         },
         {
-            "apiVersion": "2018-11-01",
+            "apiVersion": "2023-09-01",
             "type": "Microsoft.Network/networkInterfaces",
             "name": "[variables('nic1Name')]",
             "location": "[resourceGroup().location]",
@@ -389,12 +402,11 @@
             }
         },
         {
-            "apiVersion": "2018-10-01",
+            "apiVersion": "2024-03-01",
             "type": "Microsoft.Compute/virtualMachines",
             "name": "[variables('server1Name')]",
             "location": "[resourceGroup().location]",
             "dependsOn": [
-                "[concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]",
                 "[concat('Microsoft.Network/networkInterfaces/', variables('nic1Name'))]"
             ],
             "properties": {
@@ -402,7 +414,7 @@
                     "vmSize": "[variables('vmSize')]"
                 },
                 "osProfile": {
-                    "computerName": "[variables('server1Name')]",
+                    "computerName": "[variables('computerName')]",
                     "adminUsername": "[variables('vmAdminUsername')]",
                     "adminPassword": "[variables('adminPassword')]",
                     "windowsConfiguration": {
@@ -422,7 +434,7 @@
                         "name": "[variables('OSDiskName')]",
                         "caching": "ReadWrite",
                         "managedDisk": {
-                          "storageAccountType": "[variables('storageAccountType')]"
+                          "storageAccountType": "[variables('osDiskType')]"
                         },
                         "diskSizeGB": "[parameters('OSDiskSize')]"
                     }
@@ -439,7 +451,7 @@
             ]
         },
         {
-            "apiVersion": "2015-06-15",
+            "apiVersion": "2024-03-01",
             "type": "Microsoft.Compute/virtualMachines/extensions",
             "name": "[concat(variables('server1Name'),'/vmextension1')]",
             "location": "[resourceGroup().location]",

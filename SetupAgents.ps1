@@ -44,6 +44,11 @@ if ($runInsideDocker -eq "Yes") {
 
     1..$count | ForEach-Object {
         $agentContainerName = "agent$_"
+        # SetupAgents.ps1 runs at every startup: skip agent containers that already exist
+        if (docker ps -a -q --filter "name=^$agentContainerName$") {
+            Write-Host "Agent container $agentContainerName already exists"
+            return
+        }
 
         $agentName = "$vmName-docker-$_-$([guid]::NewGuid().ToString())"
         
@@ -69,10 +74,17 @@ else {
     1..$count | ForEach-Object {
         $agentName = "$vmName-$_-$([guid]::NewGuid().ToString())"
         $agentFolder = "C:\$_"
+        # SetupAgents.ps1 runs at every startup: skip agents that are already configured
+        if ((Test-Path (Join-Path $agentFolder ".runner")) -or (Test-Path (Join-Path $agentFolder ".agent"))) {
+            Write-Host "Agent in $agentFolder is already configured"
+            return
+        }
         mkdir $agentFolder -ErrorAction Ignore | Out-Null
         Set-Location $agentFolder
-        [System.IO.Compression.ZipFile]::ExtractToDirectory($agentFullname, $agentFolder)
-    
+        if (!(Test-Path (Join-Path $agentFolder "config.cmd"))) {
+            [System.IO.Compression.ZipFile]::ExtractToDirectory($agentFullname, $agentFolder)
+        }
+
         if ($agentUrl -like 'https://github.com/actions/runner/releases/download/*') {
             .\config.cmd --unattended --url "$organization" --token "$token" --name $agentName --labels "$pool" --runAsService --windowslogonaccount "NT AUTHORITY\SYSTEM"
         }
