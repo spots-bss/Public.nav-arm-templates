@@ -1,5 +1,17 @@
-﻿$ErrorActionPreference = "Stop"
+﻿param
+(
+    # Skip the confirmation and wait for the Docker service (used by the scheduled task at startup)
+    [switch] $unattended,
+    # Start the installed GitHub runner / DevOps agent services after a successful cleanup
+    [switch] $startAgents
+)
+
+$ErrorActionPreference = "Stop"
 $WarningActionPreference = "Stop"
+
+if ($unattended) {
+    Start-Transcript -Path "c:\CleanupAfterDocker.log"
+}
 
 # Specify which images to download
 $ImagesToDownload = @()
@@ -15,6 +27,15 @@ Write-Host "Checking Docker Service Settings..."
 $dockerService = (Get-Service docker -ErrorAction Ignore)
 if (!($dockerService)) {
     throw "Docker Service not found / Docker is not installed"
+}
+
+if ($unattended) {
+    # At startup the Docker service might not be running yet
+    $timeout = (Get-Date).AddMinutes(5)
+    while ($dockerService.Status -ne "Running" -and (Get-Date) -lt $timeout) {
+        Start-Sleep -Seconds 10
+        $dockerService.Refresh()
+    }
 }
 
 if ($dockerService.Status -ne "Running") {
@@ -35,9 +56,11 @@ if (!(Test-Path $dockerRootDir -PathType Container)) {
 Write-Host -Foregroundcolor Red "This function will remove all containers, remove all images and clear the folder $dockerRootDir"
 Write-Host -Foregroundcolor Red "The function will also clear the contents of $bcContainerHelperFolder."
 Write-Host -Foregroundcolor Red "Are you absolutely sure you want to do this? (This cannot be undone)"
-Write-Host -ForegroundColor Red "Type Yes to continue:" -NoNewline
-if ((Read-Host) -ne "Yes") {
-    throw "Mission aborted"
+if (!$unattended) {
+    Write-Host -ForegroundColor Red "Type Yes to continue:" -NoNewline
+    if ((Read-Host) -ne "Yes") {
+        throw "Mission aborted"
+    }
 }
 
 Write-Host "Running Docker System Prune"
@@ -49,18 +72,27 @@ docker ps -a -q | % { docker rm $_ -f 2> NULL }
 Write-Host "Stopping Docker Service"
 stop-service docker
 
-Write-Host "Downloading Docker-Ci-Zap"
-$dockerCiZapExe = Join-Path $Env:TEMP "docker-ci-zap.exe"
-Remove-Item $dockerCiZapExe -Force -ErrorAction Ignore
-(New-Object System.Net.WebClient).DownloadFile("https://github.com/moby/docker-ci-zap/raw/master/docker-ci-zap.exe", $dockerCiZapExe)
-Unblock-File -Path $dockerCiZapExe
+# A failing Docker-Ci-Zap does not fail the cleanup
+try {
+    Write-Host "Downloading Docker-Ci-Zap"
+    $dockerCiZapExe = Join-Path $Env:TEMP "docker-ci-zap.exe"
+    Remove-Item $dockerCiZapExe -Force -ErrorAction Ignore
+    (New-Object System.Net.WebClient).DownloadFile("https://github.com/moby/docker-ci-zap/raw/master/docker-ci-zap.exe", $dockerCiZapExe)
+    Unblock-File -Path $dockerCiZapExe
 
-Write-Host "Running Docker-Ci-Zap on $dockerRootDir"
-Write-Host -ForegroundColor Yellow "Note: If this fails, please restart your computer and run this script again"
-& $dockerCiZapExe -folder $dockerRootDir
+    Write-Host "Running Docker-Ci-Zap on $dockerRootDir"
+    Write-Host -ForegroundColor Yellow "Note: If this fails, please restart your computer and run this script again"
+    & $dockerCiZapExe -folder $dockerRootDir
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host -ForegroundColor Yellow "Docker-Ci-Zap failed with exit code $LASTEXITCODE"
+    }
 
-Write-Host "Removing Docker-Ci-Zap"
-Remove-Item $dockerCiZapExe
+    Write-Host "Removing Docker-Ci-Zap"
+    Remove-Item $dockerCiZapExe -Force -ErrorAction Ignore
+}
+catch {
+    Write-Host -ForegroundColor Yellow "Docker-Ci-Zap failed: $($_.Exception.Message)"
+}
 
 Write-Host "Starting Docker Service"
 Start-Service docker
@@ -90,5 +122,13 @@ if ($ImagesToDownload) {
         }
         Write-Host "Pulling $imageName"
         docker pull $imageName
+    }
+}
+
+if ($startAgents) {
+    # GitHub runner services are named actions.runner.*, Azure DevOps agent services vstsagent.*
+    Get-Service -Name "actions.runner.*", "vstsagent.*" -ErrorAction Ignore | ForEach-Object {
+        Write-Host "Starting agent service $($_.Name)"
+        Start-Service -Name $_.Name
     }
 }
