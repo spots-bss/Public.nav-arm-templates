@@ -29,7 +29,7 @@
 		},
         "OperatingSystem": {
             "type": "string",
-            "defaultValue": "Windows Server 2022",
+            "defaultValue": "Windows Server 2025",
             "allowedValues": [
                 "Windows Server 2025",
                 "Windows Server 2022",
@@ -134,13 +134,13 @@
         },
         "OSDiskType": {
             "type": "string",
-            "defaultValue": "Premium_LRS",
+            "defaultValue": "StandardSSD_LRS",
             "allowedValues": [
-                "Standard_LRS",
+                "StandardSSD_LRS",
                 "Premium_LRS"
             ],
             "metadata": {
-                "Description": "Select the preferred OS disk type. Standard_LRS is HDD, Premium_LRS is SSD. (Not all VM Sizes support SSD)"
+                "Description": "Select the preferred OS disk type. StandardSSD_LRS is Standard SSD, Premium_LRS is Premium SSD. (Premium SSD requires a VM size with premium storage support, e.g. the s sizes)"
             }
         },
         "osDiskSize": {
