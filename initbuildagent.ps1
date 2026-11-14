@@ -149,6 +149,10 @@ Register-ScheduledTask -TaskName "SetupStart" `
                        -RunLevel "Highest" `
                        -User "NT AUTHORITY\SYSTEM" | Out-Null
 
+# Keep DefaultAzureCredential (e.g. the AL-Go signing tool) away from the managed identity of the VM:
+# "dev" skips environment, workload and managed identity, so the Azure login of the job is used
+[Environment]::SetEnvironmentVariable('AZURE_TOKEN_CREDENTIALS', 'dev', 'Machine')
+
 if ($installHyperV -eq "Yes") {
     Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V, Containers -All -NoRestart | Out-Null
 }
